@@ -2,6 +2,7 @@
 import * as React from 'react';
 import renderer from 'react-test-renderer';
 import Transitioner from '../Transitioner';
+import { Animated } from 'react-native';
 
 describe('Transitioner', () => {
   // TODO: why does this fail here but not when it was part of react-navigation repo?
@@ -19,6 +20,10 @@ describe('Transitioner', () => {
             { key: '1', routeName: 'Foo' },
             { key: '2', routeName: 'Bar' },
           ],
+        },
+        transitionProps: {
+          index: 1,
+          position: new Animated.Value(0),
         },
         goBack: () => false,
         dispatch: () => false,
