@@ -875,9 +875,14 @@ class StackViewLayout extends React.Component<Props, State> {
       : enabledByDefault;
   }
 
-  private renderInnerScene(scene: Scene) {
+  private renderInnerScene(scene: Scene, transitionProps: TransitionProps) {
     const { navigation, getComponent } = scene.descriptor;
     const SceneComponent = getComponent();
+
+    navigation.transitionProps = {
+      index: transitionProps.index,
+      position: this.position,
+    };
 
     const { screenProps } = this.props;
     const headerMode = this.getHeaderMode();
@@ -978,7 +983,7 @@ class StackViewLayout extends React.Component<Props, State> {
         style={[floatingContainerStyle, cardStyle]}
         scene={scene}
       >
-        {this.renderInnerScene(scene)}
+        {this.renderInnerScene(scene, transitionProps)}
       </Card>
     );
   };

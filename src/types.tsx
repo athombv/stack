@@ -29,8 +29,14 @@ export type NavigationState = {
   params?: { [key: string]: unknown };
 };
 
+export type NavigationTransitionProps = {
+  index: number,
+  position: Animated.Value,
+}
+
 export type NavigationProp<RouteName = string, Params = object> = {
   navigate(routeName: RouteName): void;
+  transitionProps: NavigationTransitionProps;
   goBack(): void;
   goBack(key: string | null): void;
   addListener: (
