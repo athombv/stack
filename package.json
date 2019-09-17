@@ -33,7 +33,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+ssh://github.com/athombv/stack.git#@athombv"
+    "url": "https://github.com/react-navigation/react-navigation-stack.git"
   },
   "author": "",
   "license": "MIT",
