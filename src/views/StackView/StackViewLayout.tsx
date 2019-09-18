@@ -967,7 +967,7 @@ class StackViewLayout extends React.Component<Props, State> {
 
     if (hasHeader && headerMode === 'float' && !options.headerTransparent) {
       floatingContainerStyle = {
-        ...Platform.select({ web: {}, default: StyleSheet.absoluteFillObject }),
+        ...Platform.select({ default: StyleSheet.absoluteFillObject }),
         paddingTop: this.state.floatingHeaderHeight,
       };
     }
