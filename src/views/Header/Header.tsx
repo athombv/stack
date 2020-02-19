@@ -11,9 +11,15 @@ import {
   ViewStyle,
   LayoutChangeEvent,
   StyleProp,
+  TextProps,
 } from 'react-native';
 
-import { withOrientation, SafeAreaView } from '@react-navigation/native';
+import {
+  ThemeContext,
+  ThemeColors,
+  withOrientation,
+  SafeAreaView,
+} from 'react-navigation';
 
 import HeaderTitle from './HeaderTitle';
 import HeaderBackButton from './HeaderBackButton';
@@ -24,6 +30,7 @@ import {
   HeaderLayoutPreset,
   SceneInterpolatorProps,
   HeaderProps,
+  HeaderBackButtonProps,
 } from '../../types';
 
 type Props = HeaderProps & {
@@ -31,6 +38,7 @@ type Props = HeaderProps & {
   leftButtonInterpolator: (props: SceneInterpolatorProps) => any;
   titleFromLeftInterpolator: (props: SceneInterpolatorProps) => any;
   layoutInterpolator: (props: SceneInterpolatorProps) => any;
+  theme: string;
 };
 
 type SubviewProps = {
@@ -121,9 +129,9 @@ const getAppBarHeight = (isLandscape: boolean) => {
 };
 
 class Header extends React.PureComponent<Props, State> {
-  static get HEIGHT() {
-    return APPBAR_HEIGHT + STATUSBAR_HEIGHT;
-  }
+  static contextType = ThemeContext;
+
+  context!: React.ContextType<typeof ThemeContext>;
 
   static defaultProps = {
     layoutInterpolator: HeaderStyleInterpolator.forLayout,
@@ -210,27 +218,27 @@ class Header extends React.PureComponent<Props, State> {
           }
         : undefined;
 
-    const HeaderTitleComponent =
+    const render =
       headerTitle && typeof headerTitle !== 'string'
-        ? headerTitle
-        : HeaderTitle;
-    return (
-      <HeaderTitleComponent
-        onLayout={onLayout}
-        allowFontScaling={!!allowFontScaling}
-        style={[
-          color ? { color } : null,
-          layoutPreset === 'center'
-            ? // eslint-disable-next-line react-native/no-inline-styles
-              { textAlign: 'center' }
-            : // eslint-disable-next-line react-native/no-inline-styles
-              { textAlign: 'left' },
-          titleStyle,
-        ]}
-      >
-        {titleString}
-      </HeaderTitleComponent>
-    );
+        ? (headerTitle as (
+            props: TextProps & { children?: string }
+          ) => React.ReactNode)
+        : (props: TextProps & { children?: string }) => (
+            <HeaderTitle {...props} />
+          );
+
+    return render({
+      onLayout,
+      allowFontScaling: Boolean(allowFontScaling),
+      style: [
+        color ? { color } : null,
+        layoutPreset === 'center'
+          ? { textAlign: 'center' }
+          : { textAlign: 'left' },
+        titleStyle,
+      ],
+      children: titleString,
+    });
   };
 
   private renderLeftComponent = (props: SubviewProps) => {
@@ -253,13 +261,16 @@ class Header extends React.PureComponent<Props, State> {
     const width = this.state.widths[props.scene.key]
       ? (this.props.layout.initWidth - this.state.widths[props.scene.key]) / 2
       : undefined;
-    const RenderedLeftComponent = options.headerLeft || HeaderBackButton;
+    const RenderedLeftComponent =
+      (options.headerLeft as React.FunctionComponent<HeaderBackButtonProps>) ||
+      HeaderBackButton;
     const goBack = () => {
       // Go back on next tick because button ripple effect needs to happen on Android
       requestAnimationFrame(() => {
         props.scene.descriptor.navigation.goBack(props.scene.descriptor.key);
       });
     };
+
     return (
       <RenderedLeftComponent
         onPress={goBack}
@@ -324,6 +335,11 @@ class Header extends React.PureComponent<Props, State> {
 
   private renderRightComponent = (props: SubviewProps) => {
     const { headerRight } = props.scene.descriptor.options;
+
+    if (typeof headerRight === 'function') {
+      return headerRight();
+    }
+
     return headerRight || null;
   };
 
@@ -424,7 +440,10 @@ class Header extends React.PureComponent<Props, State> {
     return this.renderSubView(
       { ...props, style: StyleSheet.absoluteFill },
       'background',
-      () => options.headerBackground,
+      () =>
+        typeof options.headerBackground === 'function'
+          ? options.headerBackground()
+          : options.headerBackground,
       this.props.backgroundInterpolator
     );
   };
@@ -503,7 +522,7 @@ class Header extends React.PureComponent<Props, State> {
     props: SubviewProps,
     name: SubviewName,
     renderer: (props: SubviewProps) => React.ReactNode,
-    styleInterpolator: (props: SceneInterpolatorProps) => any
+    styleInterpolator?: (props: SceneInterpolatorProps) => any
   ) => {
     const { scene } = props;
     const { index, isStale, key } = scene;
@@ -532,10 +551,11 @@ class Header extends React.PureComponent<Props, State> {
           styles.item,
           styles[name],
           props.style,
-          styleInterpolator({
-            ...this.props,
-            ...props,
-          }),
+          styleInterpolator &&
+            styleInterpolator({
+              ...this.props,
+              ...props,
+            }),
         ]}
       >
         {subView}
@@ -545,7 +565,7 @@ class Header extends React.PureComponent<Props, State> {
 
   private renderHeader = (props: SubviewProps) => {
     const { options } = props.scene.descriptor;
-    if (options.header === null) {
+    if (options.header === null || options.headerShown === false) {
       return null;
     }
     const left = this.renderLeft(props);
@@ -676,11 +696,17 @@ class Header extends React.PureComponent<Props, State> {
       warnIfHeaderStyleDefined(left, 'left');
     }
 
+    let isDark = this.context === 'dark';
+
     // TODO: warn if any unsafe styles are provided
     const containerStyles = [
       options.headerTransparent
-        ? styles.transparentContainer
-        : styles.container,
+        ? isDark
+          ? styles.transparentContainerDark
+          : styles.transparentContainerLight
+        : isDark
+        ? styles.containerDark
+        : styles.containerLight,
       { height: appBarHeight },
       safeHeaderStyle,
     ];
@@ -692,15 +718,20 @@ class Header extends React.PureComponent<Props, State> {
       horizontal: 'always',
     };
 
+    let backgroundColor = safeHeaderStyle.backgroundColor;
+
+    if (!backgroundColor) {
+      backgroundColor = isDark
+        ? ThemeColors.dark.header
+        : ThemeColors.light.header;
+    }
+
     return (
       <Animated.View
         style={[
           this.props.layoutInterpolator(this.props),
           Platform.OS === 'ios' && !options.headerTransparent
-            ? {
-                backgroundColor:
-                  safeHeaderStyle.backgroundColor || DEFAULT_BACKGROUND_COLOR,
-              }
+            ? { backgroundColor }
             : null,
         ]}
       >
@@ -725,34 +756,62 @@ function warnIfHeaderStyleDefined(value: any, styleProp: string) {
   }
 }
 
-const platformContainerStyles = Platform.select({
+const platformContainerStylesLight = Platform.select({
   android: {
     elevation: 4,
   },
-  ios: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#A7A7AA',
-  },
-  default: {
+  web: {
     // https://github.com/necolas/react-native-web/issues/44
     // Material Design
     boxShadow: `0 2px 4px -1px rgba(0,0,0,0.2), 0 4px 5px 0 rgba(0,0,0,0.14), 0 1px 10px 0 rgba(0,0,0,0.12)`,
   },
+  default: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: ThemeColors.light.headerBorder,
+  },
 });
 
-const DEFAULT_BACKGROUND_COLOR = '#FFF';
+const platformContainerStylesDark = Platform.select({
+  android: {
+    elevation: 4,
+  },
+  web: {
+    // https://github.com/necolas/react-native-web/issues/44
+    // Material Design
+    // TODO: what to use here?
+    boxShadow: `0 2px 4px -1px rgba(0,0,0,0.2), 0 4px 5px 0 rgba(0,0,0,0.14), 0 1px 10px 0 rgba(0,0,0,0.12)`,
+  },
+  default: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: ThemeColors.dark.headerBorder,
+  },
+});
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: DEFAULT_BACKGROUND_COLOR,
-    ...platformContainerStyles,
+  containerLight: {
+    ...platformContainerStylesLight,
+    backgroundColor: ThemeColors.light.header,
   },
-  transparentContainer: {
+  containerDark: {
+    ...platformContainerStylesDark,
+    backgroundColor: ThemeColors.dark.header,
+  },
+  transparentContainerLight: {
+    ...platformContainerStylesLight,
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    ...platformContainerStyles,
+    borderBottomWidth: 0,
+    borderBottomColor: 'transparent',
+    elevation: 0,
+  },
+  transparentContainerDark: {
+    ...platformContainerStylesDark,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     borderBottomWidth: 0,
     borderBottomColor: 'transparent',
     elevation: 0,
@@ -817,4 +876,8 @@ const styles = StyleSheet.create({
   },
 });
 
-export default withOrientation(Header);
+export default Object.assign(withOrientation(Header), {
+  get HEIGHT() {
+    return APPBAR_HEIGHT + STATUSBAR_HEIGHT;
+  },
+});

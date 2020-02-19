@@ -7,7 +7,6 @@ import {
   I18nManager,
   Easing,
   Dimensions,
-  StyleProp,
   ViewStyle,
   LayoutChangeEvent,
 } from 'react-native';
@@ -16,8 +15,9 @@ import {
   StackActions,
   NavigationActions,
   NavigationProvider,
-} from '@react-navigation/core';
-import { withOrientation } from '@react-navigation/native';
+  ThemeContext,
+  withOrientation,
+} from 'react-navigation';
 import { ScreenContainer } from 'react-native-screens';
 import {
   PanGestureHandler,
@@ -41,27 +41,18 @@ import {
   TransitionConfig,
   HeaderTransitionConfig,
   HeaderProps,
+  NavigationStackConfig,
 } from '../../types';
 
-type Props = {
-  mode: 'modal' | 'card';
-  headerMode: 'screen' | 'float';
-  headerLayoutPreset: 'left' | 'center';
-  headerTransitionPreset: 'fade-in-place' | 'uikit';
-  headerBackgroundTransitionPreset: 'fade' | 'translate' | 'toggle';
-  headerBackTitleVisible?: boolean;
+type Props = NavigationStackConfig & {
   isLandscape: boolean;
-  shadowEnabled?: boolean;
-  cardOverlayEnabled?: boolean;
-  transparentCard?: boolean;
-  cardStyle?: StyleProp<ViewStyle>;
   transitionProps: TransitionProps;
   lastTransitionProps?: TransitionProps;
-  transitionConfig: (
+  transitionConfig?: (
     transitionProps: TransitionProps,
     prevTransitionProps?: TransitionProps,
     isModal?: boolean
-  ) => HeaderTransitionConfig;
+  ) => TransitionConfig;
   onGestureBegin?: () => void;
   onGestureEnd?: () => void;
   onGestureCanceled?: () => void;
@@ -115,7 +106,7 @@ const POSITION_THRESHOLD = 1 / 2;
 const GESTURE_RESPONSE_DISTANCE_HORIZONTAL = 50;
 const GESTURE_RESPONSE_DISTANCE_VERTICAL = 135;
 
-const USE_NATIVE_DRIVER = true;
+const USE_NATIVE_DRIVER = Platform.OS === 'android' || Platform.OS === 'ios';
 
 const getDefaultHeaderHeight = (isLandscape: boolean) => {
   if (Platform.OS === 'ios') {
@@ -135,6 +126,10 @@ const getDefaultHeaderHeight = (isLandscape: boolean) => {
 };
 
 class StackViewLayout extends React.Component<Props, State> {
+  static contextType = ThemeContext;
+
+  context!: React.ContextType<typeof ThemeContext>;
+
   private panGestureRef: React.RefObject<PanGestureHandler>;
   private gestureX: Animated.Value;
   private gestureY: Animated.Value;
@@ -199,7 +194,7 @@ class StackViewLayout extends React.Component<Props, State> {
 
   private renderHeader(scene: Scene, headerMode: HeaderMode) {
     const { options } = scene.descriptor;
-    const { header } = options;
+    const { header, headerShown } = options;
 
     if (__DEV__ && typeof header === 'string') {
       throw new Error(
@@ -207,7 +202,7 @@ class StackViewLayout extends React.Component<Props, State> {
       );
     }
 
-    if (header === null && headerMode === 'screen') {
+    if ((header === null || headerShown === false) && headerMode === 'screen') {
       return null;
     }
 
@@ -377,7 +372,13 @@ class StackViewLayout extends React.Component<Props, State> {
         enabled={index > 0 && this.isGestureEnabled()}
       >
         <Animated.View
-          style={[styles.container, this.transitionConfig!.containerStyle]}
+          style={[
+            styles.container,
+            this.context === 'light'
+              ? this.transitionConfig!.containerStyleLight
+              : this.transitionConfig!.containerStyleDark,
+            this.transitionConfig!.containerStyle,
+          ]}
         >
           <StackGestureContext.Provider value={this.panGestureRef}>
             <ScreenContainer style={styles.scenes}>
@@ -940,7 +941,7 @@ class StackViewLayout extends React.Component<Props, State> {
   private renderCard = (scene: Scene) => {
     const {
       transitionProps,
-      shadowEnabled,
+      cardShadowEnabled,
       cardOverlayEnabled,
       transparentCard,
       cardStyle,
@@ -951,7 +952,7 @@ class StackViewLayout extends React.Component<Props, State> {
       screenInterpolator &&
       screenInterpolator({
         ...transitionProps,
-        shadowEnabled,
+        shadowEnabled: cardShadowEnabled,
         cardOverlayEnabled,
         position: this.position,
         scene,
@@ -960,14 +961,17 @@ class StackViewLayout extends React.Component<Props, State> {
     // When using a floating header, we need to add some top
     // padding on the scene.
     const { options } = scene.descriptor;
-    const hasHeader = options.header !== null;
+    const hasHeader = options.header !== null && options.headerShown !== false;
     const headerMode = this.getHeaderMode();
 
     let floatingContainerStyle: ViewStyle = StyleSheet.absoluteFill as ViewStyle;
 
     if (hasHeader && headerMode === 'float' && !options.headerTransparent) {
       floatingContainerStyle = {
-        ...Platform.select({ default: StyleSheet.absoluteFillObject }),
+        ...Platform.select({
+          web: {} as ViewStyle,
+          default: StyleSheet.absoluteFillObject,
+        }),
         paddingTop: this.state.floatingHeaderHeight,
       };
     }

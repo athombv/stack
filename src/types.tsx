@@ -1,114 +1,135 @@
-import { Animated, StyleProp, TextStyle, ViewStyle } from 'react-native';
-import { SafeAreaView } from '@react-navigation/native';
-
-export type Route = {
-  key: string;
-  routeName: string;
-};
+import {
+  Animated,
+  TextProps,
+  StyleProp,
+  TextStyle,
+  ViewStyle,
+  EasingFunction
+} from 'react-native';
+import {
+  SafeAreaView,
+  NavigationRoute,
+  NavigationDescriptor,
+  NavigationAction,
+  NavigationState,
+  NavigationParams,
+  NavigationScreenProp,
+  NavigationNavigateAction,
+  NavigationEventCallback,
+  NavigationEventSubscription,
+  NavigationScreenConfig,
+  SupportedThemes,
+} from 'react-navigation';
 
 export type Scene = {
   key: string;
   index: number;
   isStale: boolean;
   isActive: boolean;
-  route: Route;
-  descriptor: SceneDescriptor;
+  route: NavigationRoute;
+  descriptor: NavigationDescriptor<NavigationParams, NavigationStackOptions>;
 };
 
-export type NavigationEventName =
+export type NavigationStackEventName =
   | 'willFocus'
   | 'didFocus'
   | 'willBlur'
   | 'didBlur';
 
-export type NavigationState = {
-  key: string;
-  index: number;
-  routes: Route[];
-  isTransitioning?: boolean;
-  params?: { [key: string]: unknown };
-};
+export type NavigationStackState = NavigationState;
 
 export type NavigationTransitionProps = {
-  index: number,
-  position: Animated.Value,
-}
-
-export type NavigationProp<RouteName = string, Params = object> = {
-  navigate(routeName: RouteName): void;
-  transitionProps: NavigationTransitionProps;
-  goBack(): void;
-  goBack(key: string | null): void;
-  addListener: (
-    event: NavigationEventName,
-    callback: () => void
-  ) => { remove: () => void };
-  isFocused(): boolean;
-  state: NavigationState;
-  setParams(params: Params): void;
-  getParam(): Params;
-  dispatch(action: { type: string }): void;
-  dangerouslyGetParent(): NavigationProp | undefined;
+  index: number;
+  position: Animated.Value;
 };
 
-export type HeaderMode = 'float' | 'screen';
+export type NavigationStackProp<
+  State = NavigationRoute,
+  Params = NavigationParams
+> = NavigationScreenProp<State, Params> & {
+  push: (
+    routeName: string,
+    params?: NavigationParams,
+    action?: NavigationNavigateAction
+  ) => boolean;
+  replace: (
+    routeName: string,
+    params?: NavigationParams,
+    action?: NavigationNavigateAction
+  ) => boolean;
+  reset: (actions: NavigationAction[], index: number) => boolean;
+  pop: (n?: number, params?: { immediate?: boolean }) => boolean;
+  popToTop: (params?: { immediate?: boolean }) => boolean;
+  transitionProps: NavigationTransitionProps;
+  addListener: (
+    event: NavigationStackEventName,
+    callback: NavigationEventCallback
+  ) => NavigationEventSubscription;
+};
+
+export type HeaderMode = 'float' | 'screen' | 'none';
 
 export type HeaderLayoutPreset = 'left' | 'center';
 
 export type HeaderTransitionPreset = 'fade-in-place' | 'uikit';
 
-export type HeaderBackgroundTransitionPreset = 'translate' | 'fade';
+export type HeaderBackgroundTransitionPreset = 'translate' | 'fade' | 'toggle';
 
 export type HeaderProps = {
   mode: HeaderMode;
   position: Animated.Value;
-  navigation: NavigationProp;
+  navigation: NavigationStackProp;
   layout: TransitionerLayout;
   scene: Scene;
   scenes: Scene[];
   layoutPreset: HeaderLayoutPreset;
   transitionPreset?: HeaderTransitionPreset;
   backTitleVisible?: boolean;
-  leftInterpolator: (props: SceneInterpolatorProps) => any;
-  titleInterpolator: (props: SceneInterpolatorProps) => any;
-  rightInterpolator: (props: SceneInterpolatorProps) => any;
-  backgroundInterpolator: (props: SceneInterpolatorProps) => any;
+  leftInterpolator?: (props: SceneInterpolatorProps) => any;
+  titleInterpolator?: (props: SceneInterpolatorProps) => any;
+  rightInterpolator?: (props: SceneInterpolatorProps) => any;
+  backgroundInterpolator?: (props: SceneInterpolatorProps) => any;
   isLandscape: boolean;
 };
 
 export type HeaderTransitionConfig = {
-  headerLeftInterpolator: SceneInterpolator;
-  headerLeftLabelInterpolator: SceneInterpolator;
-  headerLeftButtonInterpolator: SceneInterpolator;
-  headerTitleFromLeftInterpolator: SceneInterpolator;
-  headerTitleInterpolator: SceneInterpolator;
-  headerRightInterpolator: SceneInterpolator;
-  headerBackgroundInterpolator: SceneInterpolator;
-  headerLayoutInterpolator: SceneInterpolator;
+  headerLeftInterpolator?: SceneInterpolator;
+  headerLeftLabelInterpolator?: SceneInterpolator;
+  headerLeftButtonInterpolator?: SceneInterpolator;
+  headerTitleFromLeftInterpolator?: SceneInterpolator;
+  headerTitleInterpolator?: SceneInterpolator;
+  headerRightInterpolator?: SceneInterpolator;
+  headerBackgroundInterpolator?: SceneInterpolator;
+  headerLayoutInterpolator?: SceneInterpolator;
 };
 
 export type NavigationStackOptions = {
   title?: string;
-  header?: (props: HeaderProps) => React.ReactNode;
-  headerTitle?: string;
+  header?: ((props: HeaderProps) => React.ReactNode) | null;
+  headerShown?: boolean;
+  headerTitle?:
+    | ((props: TextProps & { children?: string }) => React.ReactNode)
+    | React.ReactNode;
   headerTitleStyle?: StyleProp<TextStyle>;
   headerTitleContainerStyle?: StyleProp<ViewStyle>;
   headerTintColor?: string;
   headerTitleAllowFontScaling?: boolean;
   headerBackAllowFontScaling?: boolean;
-  headerBackTitle?: string;
+  headerBackTitle?: string | null;
   headerBackTitleStyle?: StyleProp<TextStyle>;
   headerTruncatedBackTitle?: string;
-  headerLeft?: React.FunctionComponent<HeaderBackbuttonProps>;
+  headerLeft?:
+    | ((props: HeaderBackButtonProps) => React.ReactNode)
+    | React.ReactNode;
   headerLeftContainerStyle?: StyleProp<ViewStyle>;
   headerRight?: (() => React.ReactNode) | React.ReactNode;
   headerRightContainerStyle?: StyleProp<ViewStyle>;
-  headerBackImage?: React.FunctionComponent<{
-    tintColor: string;
+  headerBackImage?: (props: {
+    tintColor?: string;
     title?: string | null;
-  }>;
+  }) => React.ReactNode;
   headerPressColorAndroid?: string;
-  headerBackground?: string;
+  headerBackground?: (() => React.ReactNode) | React.ReactNode;
   headerTransparent?: boolean;
   headerStyle?: StyleProp<ViewStyle>;
   headerForceInset?: React.ComponentProps<typeof SafeAreaView>['forceInset'];
@@ -121,36 +142,60 @@ export type NavigationStackOptions = {
   disableKeyboardHandling?: boolean;
 };
 
-export type NavigationConfig = {
-  mode: 'card' | 'modal';
-  headerMode: HeaderMode;
-  headerLayoutPreset: HeaderLayoutPreset;
-  headerTransitionPreset: HeaderTransitionPreset;
-  headerBackgroundTransitionPreset: HeaderBackgroundTransitionPreset;
+export type NavigationStackConfig = {
+  mode?: 'card' | 'modal';
+  headerMode?: HeaderMode;
+  headerLayoutPreset?: HeaderLayoutPreset;
+  headerTransitionPreset?: HeaderTransitionPreset;
+  headerBackgroundTransitionPreset?: HeaderBackgroundTransitionPreset;
   headerBackTitleVisible?: boolean;
+  disableKeyboardHandling?: boolean;
+  transparentCard?: boolean;
   cardShadowEnabled?: boolean;
   cardOverlayEnabled?: boolean;
+  cardStyle?: StyleProp<ViewStyle>;
   onTransitionStart?: () => void;
   onTransitionEnd?: () => void;
-  transitionConfig: (
+  transitionConfig?: (
     transitionProps: TransitionProps,
     prevTransitionProps?: TransitionProps,
     isModal?: boolean
-  ) => HeaderTransitionConfig;
+  ) => TransitionConfig & HeaderTransitionConfig;
 };
 
-export type SceneDescriptor = {
-  key: string;
-  options: NavigationStackOptions;
-  navigation: NavigationProp;
-  getComponent(): React.ComponentType;
+export type NavigationStackScreenProps<
+  Params = NavigationParams,
+  ScreenProps = unknown
+> = {
+  theme: SupportedThemes;
+  navigation: NavigationStackProp<NavigationRoute, Params>;
+  screenProps: ScreenProps;
 };
 
-export type HeaderBackbuttonProps = {
+export type NavigationStackScreenComponent<
+  Params = NavigationParams,
+  ScreenProps = unknown
+> = React.ComponentType<NavigationStackScreenProps<Params, ScreenProps>> & {
+  navigationOptions?: NavigationScreenConfig<
+    NavigationStackOptions,
+    NavigationStackProp<NavigationRoute, Params>,
+    ScreenProps
+  >;
+};
+
+export type SceneDescriptorMap = {
+  [key: string]: NavigationDescriptor<
+    NavigationParams,
+    NavigationStackOptions,
+    NavigationStackProp
+  >;
+};
+
+export type HeaderBackButtonProps = {
   disabled?: boolean;
   onPress: () => void;
   pressColorAndroid?: string;
-  tintColor: string;
+  tintColor?: string;
   backImage?: NavigationStackOptions['headerBackImage'];
   title?: string | null;
   truncatedTitle?: string | null;
@@ -168,7 +213,7 @@ export type SceneInterpolatorProps = {
   scene: Scene;
   scenes: Scene[];
   position: Animated.AnimatedInterpolation;
-  navigation: NavigationProp;
+  navigation: NavigationStackProp;
   shadowEnabled?: boolean;
   cardOverlayEnabled?: boolean;
 };
@@ -185,7 +230,7 @@ export type TransitionerLayout = {
 
 export type TransitionProps = {
   layout: TransitionerLayout;
-  navigation: NavigationProp;
+  navigation: NavigationStackProp;
   position: Animated.Value;
   scenes: Scene[];
   scene: Scene;
@@ -195,13 +240,12 @@ export type TransitionProps = {
 export type TransitionConfig = {
   transitionSpec: {
     timing: Function;
+    duration: number
+    easing: EasingFunction
+    useNativeDriver: boolean
   };
   screenInterpolator: SceneInterpolator;
   containerStyle?: StyleProp<ViewStyle>;
-};
-
-export type Screen = React.ComponentType<any> & {
-  navigationOptions?: NavigationStackOptions & {
-    [key: string]: any;
-  };
+  containerStyleLight?: StyleProp<ViewStyle>;
+  containerStyleDark?: StyleProp<ViewStyle>;
 };

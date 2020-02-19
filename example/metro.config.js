@@ -1,4 +1,4 @@
-/* eslint-disable import/no-extraneous-dependencies, import/no-commonjs */
+/* eslint-disable import/no-extraneous-dependencies */
 
 const path = require('path');
 const blacklist = require('metro-config/src/defaults/blacklist');
@@ -29,6 +29,7 @@ module.exports = {
     providesModuleNodeModules: [
       '@expo/vector-icons',
       '@babel/runtime',
+      'react-navigation',
       ...projectDependencies,
     ],
   },

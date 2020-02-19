@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { Button, Text, View, StyleSheet } from 'react-native';
+import { Button, View, StyleSheet } from 'react-native';
 import { BarCodeScanner } from 'expo';
-import { withNavigationFocus } from '@react-navigation/core';
+import { withNavigationFocus, Themed } from 'react-navigation';
 import { createStackNavigator } from 'react-navigation-stack';
 
 const IndexScreen = ({ navigation }) => (
@@ -50,7 +50,9 @@ class InfoScreen extends React.Component {
   render() {
     return (
       <View style={{ flex: 1 }}>
-        <Text>{JSON.stringify(this.props.navigation.getParam('data'))}</Text>
+        <Themed.Text>
+          {JSON.stringify(this.props.navigation.getParam('data'))}
+        </Themed.Text>
       </View>
     );
   }
