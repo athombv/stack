@@ -38,6 +38,11 @@ export type NavigationStackEventName =
 
 export type NavigationStackState = NavigationState;
 
+export type NavigationTransitionProps = {
+  index: number;
+  position: Animated.Value;
+};
+
 export type NavigationStackProp<
   State = NavigationRoute,
   Params = NavigationParams
@@ -55,6 +60,7 @@ export type NavigationStackProp<
   reset: (actions: NavigationAction[], index: number) => boolean;
   pop: (n?: number, params?: { immediate?: boolean }) => boolean;
   popToTop: (params?: { immediate?: boolean }) => boolean;
+  transitionProps: NavigationTransitionProps;
   addListener: (
     event: NavigationStackEventName,
     callback: NavigationEventCallback

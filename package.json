@@ -57,12 +57,12 @@
     "husky": "^2.2.0",
     "jest": "^24.7.1",
     "prettier": "^1.18.2",
-    "react": "16.8.3",
+    "react": "16.8.6",
     "react-dom": "16.8.6",
-    "react-native": "~0.59.8",
-    "react-native-gesture-handler": "^1.1.0",
-    "react-native-screens": "^1.0.0-alpha.22",
-    "react-navigation": "^4.0.7",
+    "react-native": "~0.60.6",
+    "react-native-gesture-handler": "^1.6.0",
+    "react-native-screens": "^2.0.0-beta.6",
+    "react-navigation": "^4.1.1",
     "react-test-renderer": "~16.8.0",
     "release-it": "^12.3.6",
     "scheduler": "^0.14.0",
@@ -71,9 +71,9 @@
   "peerDependencies": {
     "react": "*",
     "react-native": "*",
-    "react-native-gesture-handler": "^1.0.0",
-    "react-native-screens": "^1.0.0 || ^1.0.0-alpha",
-    "react-navigation": "^4.0.7"
+    "react-native-gesture-handler": "^1.6.0",
+    "react-native-screens": "^2.0.0 || ^2.0.0-beta.6",
+    "react-navigation": "^^4.1.1"
   },
   "jest": {
     "preset": "react-native",
